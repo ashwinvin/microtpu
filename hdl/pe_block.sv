@@ -1,15 +1,16 @@
-module pe_block(
+module pe_block #(parameter N_WIDTH=8)
+(
     input logic clk,
     input logic rst,
     input logic el_exhst,
     input logic i_ready,
-    input logic signed [7:0] i_north,
-    input logic signed [7:0] i_west,
-    output logic signed [7:0] o_south,
-    output logic signed [7:0] o_east
+    input logic signed [N_WIDTH-1:0] i_north,
+    input logic signed [N_WIDTH-1:0] i_west,
+    output logic signed [N_WIDTH-1:0] o_south,
+    output logic signed [N_WIDTH-1:0] o_east
   );
 
-  logic signed [7:0] acc;
+  logic signed [N_WIDTH-1:0] acc;
 
   typedef enum logic [3:0]{
             IDLE,
@@ -33,9 +34,9 @@ module pe_block(
         if (i_ready)
             current_state <= PROCESS;
 
-        o_south <= {8{1'b0}};
-        o_east <= {8{1'b0}};
-        acc <= 8'b0;   
+        o_south <= {N_WIDTH{1'b0}};
+        o_east <= {N_WIDTH{1'b0}};
+        acc <= {N_WIDTH{1'b0}};   
       end
 
       PROCESS: begin 
