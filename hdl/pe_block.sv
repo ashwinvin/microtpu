@@ -1,66 +1,66 @@
 module pe_block #(parameter N_WIDTH=8)
-(
+  (
     input logic clk,
     input logic rst,
-    input logic el_exhst,
-    input logic i_ready,
-    input logic signed [N_WIDTH-1:0] i_north,
-    input logic signed [N_WIDTH-1:0] i_west,
-    output logic signed [N_WIDTH-1:0] o_south,
-    output logic signed [N_WIDTH-1:0] o_east
+    input logic pe_en,
+    input logic w_shift,
+    input logic signed [N_WIDTH-1:0] i_input,
+    input logic signed [N_WIDTH-1:0] i_weight,
+    input logic signed [N_WIDTH-1:0] i_psum,
+    output logic signed [N_WIDTH-1:0] o_input,
+    output logic signed [N_WIDTH-1:0] o_weight,
+    output logic signed [N_WIDTH-1:0] o_psum
   );
 
-  logic signed [N_WIDTH-1:0] acc;
+  logic signed [N_WIDTH-1:0] weight;
 
-  typedef enum logic [3:0]{
-            IDLE,
-            PROCESS,
-            FLUSH
-          } fsm_t;
+  typedef enum logic [2:0] {IDLE, LOAD_WEIGHT, PROCESS} state_t;
 
-  fsm_t current_state;
-
+  state_t state;
 
   always @(posedge clk or posedge rst)
   begin
+    o_weight <= 0;
 
     if (rst)
     begin
-      current_state <= IDLE;
+      state <= IDLE;
+      weight <= {N_WIDTH{1'b0}};
     end
+    case (state)
+      IDLE:
+      begin
+        if (w_shift)
+          state <= LOAD_WEIGHT;
 
-    case (current_state)
-      IDLE: begin
-        if (i_ready)
-            current_state <= PROCESS;
-
-        o_south <= {N_WIDTH{1'b0}};
-        o_east <= {N_WIDTH{1'b0}};
-        acc <= {N_WIDTH{1'b0}};   
+        weight <= {N_WIDTH{1'b0}};
+        o_weight <= {N_WIDTH{1'b0}};
+        o_psum <= {N_WIDTH{1'b0}};
+        o_input <= {N_WIDTH{1'b0}};
       end
 
-      PROCESS: begin 
-        if (el_exhst)
-          current_state <= FLUSH;
+      LOAD_WEIGHT:
+      begin
+        if (pe_en)
+          state <= PROCESS;
 
-        o_east <= i_west;
-        o_south <= i_north;
-        acc <= acc + i_west * i_north;
+        weight <= i_weight;
+        o_weight <= weight;
       end
 
-      FLUSH: begin
-        if (el_exhst == 1'b0)
-          current_state <= IDLE;
+      PROCESS:
+      begin
+        if (pe_en == 1'b0)
+          state <= IDLE;
 
-        acc <= i_west;
-        o_east <= acc;
+        o_weight <= {N_WIDTH{1'b0}};
+        o_psum <= i_psum + weight * i_input;
+        o_input <= i_input;
       end
 
       default:
-        current_state <= IDLE;
-
+        state <= IDLE;
     endcase
   end
-
 
 endmodule
